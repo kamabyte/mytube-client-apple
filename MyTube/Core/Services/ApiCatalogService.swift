@@ -142,8 +142,10 @@ private extension ApiCatalogService {
     }
 
     func makeRequest(for endpoint: Endpoint) throws -> URLRequest {
+        // JSON API живёт под /api: корень сервера занят веб-клиентом.
+        // Медиа (обложки, поток) сервер отдаёт абсолютными ссылками.
         guard var components = URLComponents(
-            url: baseURL.appending(path: endpoint.path),
+            url: baseURL.appending(path: "api").appending(path: endpoint.path),
             resolvingAgainstBaseURL: false
         ) else {
             throw APIError.invalidURL(endpoint.path)
