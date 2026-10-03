@@ -1,0 +1,11 @@
+// Общие настройки сборки MyTube. Личные значения (команда разработчика, bundle ID,
+// адрес своего сервера) — в Config/Local.xcconfig: он в .gitignore, образец —
+// Config/Local.xcconfig.example. Таким же образом можно задать что угодно ещё.
+
+PRODUCT_BUNDLE_IDENTIFIER = com.example.MyTube
+DEVELOPMENT_TEAM =
+
+// Адрес сервера MyTube API (`//` в xcconfig — комментарий, поэтому `/$()/`).
+MYTUBE_API_BASE_URL = http:/$()/mytube.local:8000
+
+#include? "Local.xcconfig"

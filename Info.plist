@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+		The catalog backend is a Laravel host on the local network, reached over
+		plain HTTP (see ApiCatalogService.baseURL). App
+		Transport Security blocks cleartext by default, and ApiCatalogService
+		swallows the resulting error and falls back to MockCatalogService — so
+		without this exception the app silently shows sample data instead of the
+		real feed.
+	-->
+	<!-- API address: MYTUBE_API_BASE_URL from Config/*.xcconfig -->
+	<key>MyTubeAPIBaseURL</key>
+	<string>$(MYTUBE_API_BASE_URL)</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+</dict>
+</plist>
