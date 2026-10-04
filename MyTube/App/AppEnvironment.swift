@@ -4,6 +4,7 @@ import Foundation
 final class AppEnvironment
 {
     let catalogService: CatalogServicing
+    let downloads = DownloadTracker()
 
     init(catalogService: CatalogServicing)
     {

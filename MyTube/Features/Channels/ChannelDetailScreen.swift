@@ -77,11 +77,23 @@ struct ChannelDetailScreen: View {
                     Text(channel.name)
                         .font(.system(size: 42, weight: .bold, design: .rounded))
 
-                    // Channels opened from the Statistics tab carry no handle.
-                    if !channel.handle.isEmpty {
-                        Text(channel.handle)
-                            .font(.headline)
-                            .foregroundStyle(AppTheme.secondaryText)
+                    // Channels opened from the Statistics tab carry no handle or counts.
+                    let details = [channel.handle, channel.videoCountsText ?? ""].filter { !$0.isEmpty }
+
+                    if !details.isEmpty || channel.isOnDemand {
+                        HStack(spacing: 16) {
+                            if channel.isOnDemand {
+                                Label("По запросу", systemImage: "hand.raised")
+                                    .font(.callout.weight(.semibold))
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 6)
+                                    .background(Color.white.opacity(0.12), in: Capsule())
+                            }
+
+                            Text(details.joined(separator: " · "))
+                                .font(.headline)
+                                .foregroundStyle(AppTheme.secondaryText)
+                        }
                     }
                 }
             }
