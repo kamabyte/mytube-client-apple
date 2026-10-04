@@ -2,17 +2,24 @@ import SwiftUI
 
 struct VideoCardView: View {
     @Environment(\.isFocused) private var isFocused
+    // Optional: previews render cards without an environment.
+    @Environment(AppEnvironment.self) private var environment: AppEnvironment?
 
-    let video: Video
+    private let initialVideo: Video
     private let focusOverride: Bool?
     /// `nil` (the default) lets the card fill its grid cell — on tvOS the layout is always
     /// 1920x1080 points, so a hardcoded width quietly costs a whole column.
     private let cardWidth: CGFloat?
 
     init(video: Video, focusOverride: Bool? = nil, cardWidth: CGFloat? = nil) {
-        self.video = video
+        self.initialVideo = video
         self.focusOverride = focusOverride
         self.cardWidth = cardWidth
+    }
+
+    /// What the list loaded, or a fresher copy after a download request in this session.
+    private var video: Video {
+        environment?.downloads.current(initialVideo) ?? initialVideo
     }
 
     private var showsFocusedState: Bool {
@@ -60,6 +67,11 @@ struct VideoCardView: View {
             .clipShape(RoundedRectangle(cornerRadius: 24))
         }
         .aspectRatio(16 / 9, contentMode: .fit)
+        .overlay(alignment: .topLeading) {
+            if let badge = DownloadBadge(state: video.downloadState) {
+                badge.padding(18)
+            }
+        }
         .overlay(alignment: .bottomTrailing) {
             if let durationText {
                 Text(durationText)
@@ -90,6 +102,9 @@ struct VideoCardView: View {
                     image
                         .resizable()
                         .scaledToFill()
+                        // Catalog videos are muted: there's nothing to watch yet.
+                        .opacity(isMuted ? 0.6 : 1)
+                        .saturation(isMuted ? 0.5 : 1)
                 default:
                     placeholderThumbnail
                 }
@@ -114,6 +129,10 @@ struct VideoCardView: View {
                 )
         }
         .clipped()
+    }
+
+    private var isMuted: Bool {
+        video.downloadState == .available || video.downloadState == .unavailable
     }
 
     private var durationText: String? {
@@ -147,3 +166,54 @@ struct VideoCardView: View {
     }
     .frame(width: 920, height: 620)
 }
+
+/// Download status chip on a thumbnail; nothing for downloaded videos.
+struct DownloadBadge: View {
+    let title: String
+    let systemImage: String
+    let isActive: Bool
+
+    init?(state: DownloadState) {
+        switch state {
+        case .available:
+            (title, systemImage, isActive) = ("Не скачано", "icloud.and.arrow.down", false)
+        case .queued:
+            (title, systemImage, isActive) = ("В очереди", "clock", true)
+        case .downloading:
+            (title, systemImage, isActive) = ("Скачивается", "arrow.down.circle", true)
+        case .unavailable:
+            (title, systemImage, isActive) = ("Недоступно", "nosign", false)
+        case .downloaded:
+            return nil
+        }
+    }
+
+    var body: some View {
+        Label(title, systemImage: systemImage)
+            .font(.system(size: 18, weight: .semibold, design: .rounded))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(isActive ? AppTheme.accent : Color.black.opacity(0.74))
+            .clipShape(Capsule())
+    }
+}
+
+private func previewVideo(_ state: DownloadState) -> Video {
+    var video = MockCatalogService.previewVideos[0]
+    video.downloadState = state
+    return video
+}
+
+#Preview("Catalog states") {
+    ScreenBackground {
+        HStack(spacing: 32) {
+            ForEach([DownloadState.available, .queued, .downloading, .unavailable], id: \.self) { state in
+                VideoCardView(video: previewVideo(state), focusOverride: false)
+                    .frame(width: 420)
+            }
+        }
+        .padding(AppTheme.contentPadding)
+    }
+}
+

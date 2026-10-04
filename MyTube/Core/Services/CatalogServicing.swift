@@ -13,6 +13,12 @@ protocol CatalogServicing {
     func fetchStatisticsSummary() async throws -> StatisticsSummary
     func fetchChannelStatistics() async throws -> [ChannelStatistic]
     func fetchDailyStatistics() async throws -> [DailyStatistic]
+
+    /// Fresh copy of one video — polled while its download is queued or running.
+    func fetchVideo(_ video: Video) async throws -> Video
+    /// Asks the server to download a catalog video (same as "Скачать в медиатеку" on the web).
+    func requestDownload(for video: Video) async throws -> Video
+    func cancelDownload(for video: Video) async throws -> Video
 }
 
 struct ChannelPage {

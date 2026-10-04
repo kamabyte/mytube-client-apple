@@ -12,13 +12,23 @@ struct ChannelCardView: View {
         VStack(alignment: .leading, spacing: 14) {
             thumbnail
 
-            Text(channel.name)
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(isFocused ? .white : Color.white.opacity(0.84))
-                .lineLimit(2)
-                .multilineTextAlignment(.leading)
-                .padding(.horizontal, 6)
-                .padding(.bottom, 6)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(channel.name)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(isFocused ? .white : Color.white.opacity(0.84))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+
+                // Downloaded and not yet downloaded — on-demand channels are mostly catalog.
+                if let counts = channel.videoCountsText {
+                    Text(counts)
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundStyle(isFocused ? Color.white.opacity(0.8) : Color.white.opacity(0.56))
+                        .lineLimit(1)
+                }
+            }
+            .padding(.horizontal, 6)
+            .padding(.bottom, 6)
         }
         .zIndex(isFocused ? 1 : 0)
         .animation(.easeOut(duration: 0.18), value: isFocused)

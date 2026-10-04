@@ -1,4 +1,4 @@
 // Скопируйте в Config/Local.xcconfig и впишите свои значения.
 DEVELOPMENT_TEAM = ABCDE12345
 PRODUCT_BUNDLE_IDENTIFIER = com.yourname.MyTube
-MYTUBE_API_BASE_URL = http:/$()/192.168.1.10:8000
+MYTUBE_API_BASE_URL = http:/$()/192.168.1.10:8000/api

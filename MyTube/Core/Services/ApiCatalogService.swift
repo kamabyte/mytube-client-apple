@@ -119,6 +119,29 @@ struct ApiCatalogService: CatalogServicing
         let response = try await request([DailyStatisticResponse].self, endpoint: .statisticsDaily)
         return response.compactMap { $0.toDomain() }
     }
+
+    // Download endpoints never fall back to mock data: a request that didn't reach the
+    // server must not look like it worked.
+    func fetchVideo(_ video: Video) async throws -> Video {
+        let response = try await request(ResourceResponse<VideoResponse>.self, endpoint: .video(sourceID: video.sourceID))
+        return response.data.toDomain(baseURL: baseURL)
+    }
+
+    func requestDownload(for video: Video) async throws -> Video {
+        let response = try await request(
+            ResourceResponse<VideoResponse>.self,
+            endpoint: .download(sourceID: video.sourceID, method: .post)
+        )
+        return response.data.toDomain(baseURL: baseURL)
+    }
+
+    func cancelDownload(for video: Video) async throws -> Video {
+        let response = try await request(
+            ResourceResponse<VideoResponse>.self,
+            endpoint: .download(sourceID: video.sourceID, method: .delete)
+        )
+        return response.data.toDomain(baseURL: baseURL)
+    }
 }
 
 private extension ApiCatalogService {
@@ -190,6 +213,11 @@ private extension ApiCatalogService {
         }
     }
 
+    /// `{ data: … }` — a single Laravel resource.
+    struct ResourceResponse<Resource: Decodable>: Decodable {
+        let data: Resource
+    }
+
     struct PaginationMeta: Decodable {
         let currentPage: Int
         let lastPage: Int
@@ -209,12 +237,16 @@ private extension ApiCatalogService {
         let name: String
         let thumbnail: String?
         let videosCount: Int?
+        let catalogCount: Int?
+        let downloadOnDemand: Bool?
 
         enum CodingKeys: String, CodingKey {
             case id
             case name
             case thumbnail
             case videosCount = "videos_count"
+            case catalogCount = "catalog_count"
+            case downloadOnDemand = "download_on_demand"
         }
 
         func toDomain(baseURL: URL) -> Channel {
@@ -226,7 +258,10 @@ private extension ApiCatalogService {
                 description: "Channel imported from API.",
                 avatarURL: resolvedURL(from: thumbnail, baseURL: baseURL),
                 subscribersText: subscriberCountText(videosCount),
-                accentColorHex: accentColor(for: id.stableUUID(namespace: "channel"))
+                accentColorHex: accentColor(for: id.stableUUID(namespace: "channel")),
+                downloadedCount: videosCount,
+                catalogCount: catalogCount,
+                isOnDemand: downloadOnDemand ?? false
             )
         }
     }
@@ -327,6 +362,8 @@ private extension ApiCatalogService {
         let durationSeconds: Int?
         let videoURL: String?
         let publishedAt: Date?
+        let downloadState: String?
+        let downloadRequestedAt: Date?
         let channel: ChannelResponse?
 
         enum CodingKeys: String, CodingKey {
@@ -338,6 +375,8 @@ private extension ApiCatalogService {
             case durationSeconds = "duration_seconds"
             case videoURL = "video_url"
             case publishedAt = "published_at"
+            case downloadState = "download_state"
+            case downloadRequestedAt = "download_requested_at"
             case channel
         }
 
@@ -355,7 +394,11 @@ private extension ApiCatalogService {
                 streamURL: resolvedStreamURL,
                 channelID: channelID,
                 channelName: channelName,
-                publishedText: publishedText(publishedAt)
+                publishedText: publishedText(publishedAt),
+                sourceID: id.rawValue,
+                // No field — an older server that only lists downloaded videos.
+                downloadState: downloadState.flatMap(DownloadState.init(rawValue:)) ?? .downloaded,
+                isDownloadRequested: downloadRequestedAt != nil
             )
         }
 
@@ -420,6 +463,7 @@ private extension ApiCatalogService {
     enum HTTPMethod: String {
         case get = "GET"
         case post = "POST"
+        case delete = "DELETE"
     }
 
     struct Endpoint {
@@ -434,7 +478,7 @@ private extension ApiCatalogService {
                 path: "channels",
                 queryItems: [
                     URLQueryItem(name: "sort", value: "name"),
-                    URLQueryItem(name: "fields", value: "id,name,thumbnail"),
+                    URLQueryItem(name: "fields", value: "id,name,thumbnail,download_on_demand"),
                     URLQueryItem(name: "page[number]", value: String(page)),
                     URLQueryItem(name: "page[size]", value: String(pageSize))
                 ],
@@ -452,6 +496,8 @@ private extension ApiCatalogService {
             
             var queryItems = [
                 URLQueryItem(name: "include", value: "channel"),
+                // The whole catalog, not just downloaded videos; each carries download_state.
+                URLQueryItem(name: "filter[catalog]", value: "1"),
                 URLQueryItem(name: "page[number]", value: String(page)),
                 URLQueryItem(name: "page[size]", value: String(pageSize)),
                 URLQueryItem(name: "sort", value: sortValue)
@@ -467,6 +513,15 @@ private extension ApiCatalogService {
                 queryItems: queryItems,
                 body: nil
             )
+        }
+
+        static func video(sourceID: String) -> Endpoint {
+            Endpoint(method: .get, path: "videos/\(sourceID)", queryItems: [], body: nil)
+        }
+
+        /// POST — request a download, DELETE — cancel the request.
+        static func download(sourceID: String, method: HTTPMethod) -> Endpoint {
+            Endpoint(method: method, path: "videos/\(sourceID)/download", queryItems: [], body: nil)
         }
 
         static let statistics = Endpoint(
@@ -503,6 +558,8 @@ private extension ApiCatalogService {
                 return "Invalid API URL for path \(path)."
             case .invalidResponse:
                 return "The server response was not an HTTP response."
+            case .requestFailed(422, _):
+                return "Это видео не скачать: YouTube его не отдаёт."
             case .requestFailed(let statusCode, let payload):
                 let message = String(data: payload, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
                 let suffix = message.flatMap { $0.isEmpty ? nil : $0 } ?? "No response body."

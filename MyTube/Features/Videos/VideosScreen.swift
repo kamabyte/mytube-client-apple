@@ -55,7 +55,7 @@ struct VideosScreen: View {
                 .scrollIndicators(.hidden)
             }
             .navigationDestination(for: Video.self) { video in
-                PlayerScreen(video: video)
+                VideoDestinationView(video: video)
             }
         }
         .task {

@@ -220,6 +220,24 @@ struct MockCatalogService: CatalogServicing {
         return MockCatalogService.previewDailyStatistics
     }
 
+    func fetchVideo(_ video: Video) async throws -> Video {
+        video
+    }
+
+    func requestDownload(for video: Video) async throws -> Video {
+        var queued = video
+        queued.downloadState = .queued
+        queued.isDownloadRequested = true
+        return queued
+    }
+
+    func cancelDownload(for video: Video) async throws -> Video {
+        var available = video
+        available.downloadState = .available
+        available.isDownloadRequested = false
+        return available
+    }
+
     private func throwIfFailingStatistics() throws {
         if failingStatistics {
             throw URLError(.timedOut)

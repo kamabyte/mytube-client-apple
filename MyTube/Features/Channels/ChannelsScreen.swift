@@ -55,7 +55,7 @@ struct ChannelsScreen: View {
                 ChannelDetailScreen(channel: channel)
             }
             .navigationDestination(for: Video.self) { video in
-                PlayerScreen(video: video)
+                VideoDestinationView(video: video)
             }
         }
         .task {

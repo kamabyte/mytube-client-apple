@@ -5,7 +5,9 @@
 PRODUCT_BUNDLE_IDENTIFIER = com.example.MyTube
 DEVELOPMENT_TEAM =
 
-// Адрес сервера MyTube API (`//` в xcconfig — комментарий, поэтому `/$()/`).
-MYTUBE_API_BASE_URL = http:/$()/mytube.local:8000
+// Адрес JSON API MyTube — с /api на конце: без него запросы попадают в веб-клиент,
+// приходит HTML, и приложение молча показывает демо-данные (MockCatalogService).
+// `//` в xcconfig — комментарий, поэтому `/$()/`.
+MYTUBE_API_BASE_URL = http:/$()/mytube.local:8000/api
 
 #include? "Local.xcconfig"

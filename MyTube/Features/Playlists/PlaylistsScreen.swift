@@ -30,7 +30,7 @@ struct PlaylistsScreen: View {
                 playlistDetail(playlist)
             }
             .navigationDestination(for: Video.self) { video in
-                PlayerScreen(video: video)
+                VideoDestinationView(video: video)
             }
         }
         .task {
